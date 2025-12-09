@@ -1,5 +1,5 @@
 <template>
-  <section class="nest-heatmap">
+  <section class="nest-heatmap" ref="rootEl">
     <h2>Hoornaarnest – Heatmap Analyse</h2>
 
     <form submit.trigger="run($event)" class="nh-form">
@@ -127,6 +127,76 @@
             step="0.05"
             value.bind="config.nearWaterBonus">
         </label>
+
+        <label class="nh-label">
+          <span>Gewicht per waarneming (wObs)</span>
+          <input
+            type="number"
+            min="0"
+            max="1"
+            step="0.01"
+            value.bind="config.wObs">
+        </label>
+
+        <div class="nh-row">
+          <label class="nh-label nh-inline">
+            <span>Boskleur R</span>
+            <input type="number" min="0" max="255" value.bind="config.treeColor.r">
+          </label>
+          <label class="nh-label nh-inline">
+            <span>G</span>
+            <input type="number" min="0" max="255" value.bind="config.treeColor.g">
+          </label>
+          <label class="nh-label nh-inline">
+            <span>B</span>
+            <input type="number" min="0" max="255" value.bind="config.treeColor.b">
+          </label>
+        </div>
+
+        <div class="nh-row">
+          <label class="nh-label nh-inline">
+            <span>Bos tolerantie</span>
+            <input type="number" min="0" max="128" step="1" value.bind="config.treeTolerance">
+          </label>
+          <label class="nh-label nh-inline">
+            <span>Gras tolerantie</span>
+            <input type="number" min="0" max="128" step="1" value.bind="config.grassTolerance">
+          </label>
+          <label class="nh-label nh-inline">
+            <span>Water tolerantie</span>
+            <input type="number" min="0" max="128" step="1" value.bind="config.waterTolerance">
+          </label>
+        </div>
+
+        <div class="nh-row">
+          <label class="nh-label nh-inline">
+            <span>Graskleur R</span>
+            <input type="number" min="0" max="255" value.bind="config.grassColor.r">
+          </label>
+          <label class="nh-label nh-inline">
+            <span>G</span>
+            <input type="number" min="0" max="255" value.bind="config.grassColor.g">
+          </label>
+          <label class="nh-label nh-inline">
+            <span>B</span>
+            <input type="number" min="0" max="255" value.bind="config.grassColor.b">
+          </label>
+        </div>
+
+        <div class="nh-row">
+          <label class="nh-label nh-inline">
+            <span>Waterkleur R</span>
+            <input type="number" min="0" max="255" value.bind="config.waterColor.r">
+          </label>
+          <label class="nh-label nh-inline">
+            <span>G</span>
+            <input type="number" min="0" max="255" value.bind="config.waterColor.g">
+          </label>
+          <label class="nh-label nh-inline">
+            <span>B</span>
+            <input type="number" min="0" max="255" value.bind="config.waterColor.b">
+          </label>
+        </div>
       </fieldset>
 
       <fieldset class="nh-fieldset">
@@ -217,7 +287,7 @@
         </label>
       </fieldset>
 
-      <button type="submit" class="nh-button">
+      <button type="submit" class="nh-button" disabled.bind="!canRun || isBusy">
         Bereken heatmap
       </button>
     </form>
@@ -237,7 +307,11 @@
           <input type="file" accept=".dbf" change.trigger="dbfFileChanged($event.target.files[0])">
         </label>
       </div>
-      <button type="button" class="nh-button" click.trigger="exportShpToGeoJson()">
+      <button
+        type="button"
+        class="nh-button"
+        disabled.bind="!canExport || isBusy"
+        click.trigger="exportShpToGeoJson()">
         Exporteer naar WGS84 GeoJSON
       </button>
     </section>

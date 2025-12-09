@@ -8,6 +8,13 @@ export interface HeatmapConfig {
   treeScore: number;      // bijv. 1.0
   grassScore: number;     // bijv. 0.15
   nearWaterBonus: number; // bijv. 0.1
+  wObs?: number;          // weging observatiedichtheid t.o.v. ecologie (0–1)
+  treeColor: { r: number; g: number; b: number };
+  grassColor: { r: number; g: number; b: number };
+  waterColor: { r: number; g: number; b: number };
+  treeTolerance?: number;
+  grassTolerance?: number;
+  waterTolerance?: number;
 
   // Geometrie / afstanden
   smoothPixels: number;      // smoothingradius in pixels (bijv. 20)
@@ -256,18 +263,22 @@ export function computeNestHeatmap(
   const prelimTreeMask = new Uint8Array(baseW * baseH);
   const grassMask = new Uint8Array(baseW * baseH);
 
-  const targetTree = { r: 0xdc, g: 0xeb, b: 0xcd };   // #dcebcd
-  const targetGrass = { r: 0xe8, g: 0xf0, b: 0xdc };  // #e8f0dc
-  const targetWater = { r: 0xd5, g: 0xe8, b: 0xeb };  // #d5e8eb
-  const tolTree = 32;   // tighter to avoid roads bleed (e.g. #a09ab0)
-  const tolWater = 28;  // reduced so roads don't count as water
+  // HSL-based classification (spec ranges), tolerances expand the ranges.
+  const hTreeMin = 80;
+  const hTreeMax = 150;
+  const sTreeMin = 10;
+  const sTreeMax = 55;
+  const lTreeMin = 20;
+  const lTreeMax = 55;
 
-  const colorDist = (r1: number, g1: number, b1: number, t: { r: number; g: number; b: number }) => {
-    const dr = r1 - t.r;
-    const dg = g1 - t.g;
-    const db = b1 - t.b;
-    return Math.sqrt(dr * dr + dg * dg + db * db);
-  };
+  const hGrassMin = 70;
+  const hGrassMax = 140;
+  const sGrassMin = 40;
+  const lGrassMin = 55;
+
+  const tolTree = Math.min(40, Math.max(0, (config.treeTolerance ?? 0) / 2));   // degrees / %
+  const tolGrass = Math.min(40, Math.max(0, (config.grassTolerance ?? 0) / 2));
+  const tolWater = Math.min(60, Math.max(0, config.waterTolerance ?? 32));
 
   // 3a) Eerste pass: kleur-gebaseerde classificatie
   for (let y = 0; y < baseH; y++) {
@@ -277,14 +288,20 @@ export function computeNestHeatmap(
       const g = basePixels[iBase + 1];
       const b = basePixels[iBase + 2];
 
-      const dTree = colorDist(r, g, b, targetTree);
-      const dGrass = colorDist(r, g, b, targetGrass);
-      const dWater = colorDist(r, g, b, targetWater);
+      const { h, s, l } = rgbToHsl(r, g, b);
 
-      // New palette classification based on target colors with tolerances.
-      const prelimIsTree = dTree <= tolTree;
-      const prelimIsGrass = !prelimIsTree && dGrass <= tolTree; // same target; tree wins ties
-      const isWater = dWater <= tolWater;
+      const isWater = b > g + 15 + tolWater * 0.25 && b > r + 15 + tolWater * 0.25;
+
+      const prelimIsTree =
+        h >= hTreeMin - tolTree && h <= hTreeMax + tolTree &&
+        s >= sTreeMin - tolTree && s <= sTreeMax + tolTree &&
+        l >= lTreeMin - tolTree && l <= lTreeMax + tolTree;
+
+      const prelimIsGrass =
+        !prelimIsTree &&
+        h >= hGrassMin - tolGrass && h <= hGrassMax + tolGrass &&
+        s >= sGrassMin - tolGrass &&
+        l >= lGrassMin - tolGrass;
 
       const i = idxDomain(x, y);
 
@@ -390,7 +407,7 @@ export function computeNestHeatmap(
   // 0   => alleen ecologie (coverage wordt genegeerd)
   // 1   => volledig huidige gedrag (eco * coverage)
   // 0.5 => half-half: eco * (0.5 + 0.5 * coverage)
-  const wObs = 0.8;
+  const wObs = Math.min(1, Math.max(0, config.wObs ?? 0.8));
 
   for (let i = 0; i < rawScore.length; i++) {
     if (!domainMask[i] || eco[i] <= 0) {

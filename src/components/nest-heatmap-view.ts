@@ -1,5 +1,5 @@
 // src/components/nest-heatmap-view.ts
-import { bindable, customElement } from 'aurelia';
+import { bindable, customElement, INode } from 'aurelia';
 import template from './nest-heatmap-view.html?raw';
 import {
   computeNestHeatmap,
@@ -30,6 +30,13 @@ export class NestHeatmapView {
     treeScore: 1.0,
     grassScore: 0.15,
     nearWaterBonus: 0.1,
+    wObs: 0.8,
+    treeColor: { r: 0xdc, g: 0xeb, b: 0xcd },
+    grassColor: { r: 0xe8, g: 0xf0, b: 0xdc },
+    waterColor: { r: 0xd5, g: 0xe8, b: 0xeb },
+    treeTolerance: 45,
+    grassTolerance: 45,
+    waterTolerance: 32,
     smoothPixels: 20,
     coveragePx: 90,
     isoLevels: [0.5, 0.75, 0.9],
@@ -42,6 +49,7 @@ export class NestHeatmapView {
 
   heatmapUrl: string | null = null;
   isoUrl: string | null = null;
+  isBusy = false;
 
   observationsAll: ObservationPoint[] = [];
   observationsFiltered: ObservationPoint[] = [];
@@ -53,6 +61,12 @@ export class NestHeatmapView {
   toDate = '';
   boundsCrs: 'rd' | 'wgs84' = 'rd';
   observationSource: 'shp' | 'geojson' = 'shp';
+  private host: HTMLElement | null = null;
+  private rootEl: HTMLElement | null = null;
+
+  created(owningView: INode) {
+    this.host = owningView as HTMLElement;
+  }
 
   baseFileChanged(newFile: File | null) {
     this.baseFile = newFile;
@@ -91,10 +105,27 @@ export class NestHeatmapView {
     }
   }
 
+  get canRun(): boolean {
+    const hasObs = this.observationSource === 'geojson'
+      ? !!this.geoJsonFile
+      : !!this.shpFile;
+    const hasBase = this.baseSource === 'upload' ? !!this.baseFile : true;
+    return hasObs && hasBase;
+  }
+
+  get canExport(): boolean {
+    return !!this.shpFile;
+  }
+
   async run(event?: Event) {
     if (event) {
       event.preventDefault();
     }
+
+    // Make sure we use the latest date selection even if bindings didn't trigger yet.
+    const filtered = this.filterObservationsByDate();
+    this.observationsFiltered = filtered;
+    this.updateInfoMessage();
 
     if (this.observationSource === 'geojson' && !this.geoJsonFile) {
       console.warn('GeoJSON met registraties is nodig.');
@@ -106,6 +137,7 @@ export class NestHeatmapView {
     }
 
     try {
+      this.setBusy(true);
       if (!this.observationsFiltered.length) {
         console.warn('Geen registraties binnen de geselecteerde periode.');
         return;
@@ -133,6 +165,8 @@ export class NestHeatmapView {
       this.isoUrl = result.isoCanvas.toDataURL('image/png');
     } catch (err) {
       console.error('Error while computing heatmap:', err);
+    } finally {
+      this.setBusy(false);
     }
   }
 
@@ -436,6 +470,7 @@ export class NestHeatmapView {
       return;
     }
     try {
+      this.setBusy(true);
       const shpBuffer = await this.shpFile.arrayBuffer();
       const parsedShp = parseShapefile(shpBuffer);
 
@@ -476,6 +511,8 @@ export class NestHeatmapView {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Kon shapefile niet converteren naar GeoJSON:', err);
+    } finally {
+      this.setBusy(false);
     }
   }
 
@@ -620,18 +657,16 @@ export class NestHeatmapView {
     this.applyDateFilter();
   }
 
-  private applyDateFilter() {
+  private filterObservationsByDate(): ObservationPoint[] {
     const hasDates = this.observationsAll.some(o => !!o.dateStart);
     if (!hasDates) {
-      this.observationsFiltered = [...this.observationsAll];
-      this.updateInfoMessage();
-      return;
+      return [...this.observationsAll];
     }
 
     const from = this.parseDate(this.fromDate);
     const to = this.parseDate(this.toDate);
 
-    const filtered = this.observationsAll.filter(obs => {
+    return this.observationsAll.filter(obs => {
       if (!from && !to) return true;
       if (!obs.dateStart) return false;
 
@@ -642,21 +677,36 @@ export class NestHeatmapView {
       if (to && obsDate > to) return false;
       return true;
     });
+  }
 
-    this.observationsFiltered = filtered;
+  private applyDateFilter() {
+    this.observationsFiltered = this.filterObservationsByDate();
     this.updateInfoMessage();
   }
 
-  private parseDate(str: string | undefined): Date | null {
+  private parseDate(input: string | number | Date | undefined | null): Date | null {
+    if (input instanceof Date) {
+      return isNaN(input.getTime()) ? null : input;
+    }
+    if (input === undefined || input === null) {
+      return null;
+    }
+
+    const str = String(input).trim();
     if (!str) return null;
-    const clean = str.includes('-') ? str : `${str.slice(0,4)}-${str.slice(4,6)}-${str.slice(6,8)}`;
+
+    // Accept YYYYMMDD, YYYY-MM-DD, or ISO strings with time.
+    const clean = str.includes('-')
+      ? str.slice(0, 10)
+      : `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}`;
+
     const d = new Date(clean);
     return isNaN(d.getTime()) ? null : d;
   }
 
   private updateInfoMessage() {
     const total = this.observationsAll.length;
-    const filtered = this.observationsFiltered.length;
+    const filtered = this.filterObservationsByDate().length;
     if (!total) {
       this.shapefileInfo = null;
       return;
@@ -664,6 +714,19 @@ export class NestHeatmapView {
 
     const from = this.fromDate || '...';
     const to = this.toDate || '...';
-    this.shapefileInfo = `${filtered} van ${total} registraties binnen selectie (${from} t/m ${to}).`;
+    const hasDates = this.observationsAll.some(o => !!o.dateStart);
+    const suffix = hasDates
+      ? ''
+      : ' (geen datumvelden gevonden; filter wordt niet toegepast)';
+    this.shapefileInfo = `${filtered} van ${total} registraties binnen selectie (${from} t/m ${to}).${suffix}`;
+  }
+
+  private setBusy(state: boolean) {
+    this.isBusy = state;
+    this.host?.classList?.toggle('is-busy', state);
+    this.rootEl?.classList?.toggle('is-busy', state);
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.style.cursor = state ? 'progress' : 'default';
+    }
   }
 }

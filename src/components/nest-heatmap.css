@@ -84,6 +84,17 @@
   background: #4338ca;
 }
 
+.nh-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #a5a5a5;
+}
+
+.nest-heatmap.is-busy,
+.nest-heatmap.is-busy * {
+  cursor: progress !important;
+}
+
 .nh-results {
   margin-top: 1rem;
 }
