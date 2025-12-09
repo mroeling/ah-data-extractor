@@ -1,0 +1,37 @@
+{
+  "name": "ah-heatmap",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint \"src/**/*.{ts,tsx,js,jsx}\"",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@aurelia/fetch-client": "^2.0.0-beta.25",
+    "@aurelia/kernel": "^2.0.0-beta.25",
+    "@aurelia/runtime-html": "^2.0.0-beta.25",
+    "aurelia": "^2.0.0-beta.25",
+    "@aurelia/router-lite": "^2.0.0-beta.24"
+  },
+  "devDependencies": {
+    "@aurelia/vite-plugin": "^2.0.0-beta.11",
+    "@types/chrome": "^0.0.253",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "eslint": "^8.55.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-prettier": "^5.0.1",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.3",
+    "vite": "^7.0.2",
+    "vite-plugin-static-copy": "^3.1.4",
+    "vitest": "^1.0.0"
+  }
+}
