@@ -1,0 +1,193 @@
+<template>
+  <section class="data-extractor" ref="rootEl">
+    <header class="hero">
+      <p class="eyebrow">Data-extractor</p>
+      <h1>Registraties filteren & exporteren</h1>
+      <p class="lead">
+        Upload een shapefile (.shp + .dbf) of GeoJSON, filter de registraties op datum, tekst of coördinaten
+        en exporteer het resultaat als CSV of GeoJSON.
+      </p>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-eyebrow">Invoer</p>
+          <h2>Data inladen</h2>
+        </div>
+        <button type="button" class="ghost" disabled.bind="isBusy" click.trigger="resetData()">Leeg invoer</button>
+      </div>
+
+      <div class="input-grid">
+        <div>
+          <label class="field">
+            <span>Registraties (shapefile .shp)</span>
+            <input type="file" accept=".shp" change.trigger="shpFileChanged($event.target.files[0])">
+          </label>
+          <label class="field">
+            <span>Attribuuttabel (.dbf, optioneel)</span>
+            <input type="file" accept=".dbf" change.trigger="dbfFileChanged($event.target.files[0])">
+          </label>
+          <p class="hint">We koppelen records uit de DBF automatisch aan de shapefile op volgorde.</p>
+        </div>
+        <div class="divider">
+          <span>of</span>
+        </div>
+        <div>
+          <label class="field">
+            <span>GeoJSON met registraties</span>
+            <input type="file" accept=".json,.geojson" change.trigger="geoJsonFileChanged($event.target.files[0])">
+          </label>
+          <p class="hint">Alle eigenschappen uit GeoJSON komen beschikbaar als kolom in het overzicht.</p>
+        </div>
+      </div>
+
+      <p class="status" if.bind="infoMessage">${infoMessage}</p>
+      <p class="status error" if.bind="loadError">${loadError}</p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-eyebrow">Filters</p>
+          <h2>Verfijn resultaten</h2>
+        </div>
+        <button type="button" class="ghost" disabled.bind="!hasData" click.trigger="resetFilters()">Reset filters</button>
+      </div>
+
+      <div class="filters">
+        <label class="field">
+          <span>Zoek in waarden</span>
+          <input
+            type="search"
+            placeholder="Adres, code, ... "
+            value.bind="filters.text"
+            input.trigger="onFilterChange()">
+        </label>
+
+        <div class="row">
+          <label class="field compact">
+            <span>Van (YYYY-MM-DD)</span>
+            <input type="date" value.bind="filters.from" change.trigger="onFilterChange()">
+          </label>
+          <label class="field compact">
+            <span>Tot en met</span>
+            <input type="date" value.bind="filters.to" change.trigger="onFilterChange()">
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked.bind="filters.onlyWithDate" change.trigger="onFilterChange()">
+            <span>Alleen registraties met datum</span>
+          </label>
+          <label class="field compact">
+            <span>Sorteer op datum</span>
+            <select value.bind="filters.sortDate" change.trigger="onFilterChange()">
+              <option value="none">Geen sortering</option>
+              <option value="asc">Oplopend</option>
+              <option value="desc">Aflopend</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row bounds-row">
+          <label class="checkbox">
+            <input type="checkbox" checked.bind="filters.boundsEnabled" change.trigger="onFilterChange()">
+            <span>Filter op coördinatenbereik</span>
+          </label>
+          <div class="bounds-grid" if.bind="filters.boundsEnabled">
+            <label class="field compact">
+              <span>minX (west)</span>
+              <input type="number" step="any" value.bind="boundsInput.minX" change.trigger="onFilterChange()">
+            </label>
+            <label class="field compact">
+              <span>minY (zuid)</span>
+              <input type="number" step="any" value.bind="boundsInput.minY" change.trigger="onFilterChange()">
+            </label>
+            <label class="field compact">
+              <span>maxX (oost)</span>
+              <input type="number" step="any" value.bind="boundsInput.maxX" change.trigger="onFilterChange()">
+            </label>
+            <label class="field compact">
+              <span>maxY (noord)</span>
+              <input type="number" step="any" value.bind="boundsInput.maxY" change.trigger="onFilterChange()">
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel results" if.bind="hasData">
+      <div class="results-head">
+        <div>
+          <p class="panel-eyebrow">Resultaten</p>
+          <h2>Overzicht</h2>
+          <p class="hint">${resultSummary}</p>
+          <p class="hint">Excel-export genereert een .xlsx-bestand; CSV/GeoJSON blijven beschikbaar voor andere tools.</p>
+        </div>
+        <div class="actions">
+          <label class="field inline">
+            <span>Per pagina</span>
+            <select value.two-way="pageSize" change.trigger="onPageSizeChange($event.target.valueAsNumber || $event.target.value)">
+              <option repeat.for="opt of pageSizeOptions" model.bind="opt">${opt}</option>
+            </select>
+          </label>
+          <button type="button" disabled.bind="!filteredRows.length" click.trigger="exportCsv()">Exporteer CSV</button>
+          <button type="button" disabled.bind="!filteredRows.length" click.trigger="exportExcel()">Exporteer Excel</button>
+          <button type="button" disabled.bind="!filteredRows.length" click.trigger="exportGeoJson()">Exporteer GeoJSON</button>
+        </div>
+      </div>
+
+      <div class="table-wrap" if.bind="filteredRows.length">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Locatie</th>
+              <th>X</th>
+              <th>Y</th>
+              <th>Datum</th>
+              <th repeat.for="col of attributeColumns">${col}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr repeat.for="row of pageRows">
+              <td>${(currentPage - 1) * pageSize + $index + 1}</td>
+              <td>
+                <a class="map-link" href.bind="googleMapsUrl(row)" target="_blank" rel="noopener">
+                  📍
+                </a>
+              </td>
+              <td>${row.x}</td>
+              <td>${row.y}</td>
+              <td>${row.date || '-'}</td>
+              <td repeat.for="col of attributeColumns">
+                <span if.bind="col !== 'obs_uri'">${formatValue(row.attributes[col])}</span>
+                <a
+                  if.bind="col === 'obs_uri'"
+                  class="map-link"
+                  href.bind="obsUrl(row.attributes[col])"
+                  target="_blank"
+                  rel="noopener">
+                  ${obsLabel(row.attributes[col])}
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint" if.bind="!filteredRows.length">Geen registraties binnen de huidige filter.</p>
+
+      <div class="pagination" if.bind="pageCount > 1">
+        <button type="button" class="ghost" disabled.bind="currentPage === 1" click.trigger="goToPage(1)">Eerste</button>
+        <button type="button" class="ghost" disabled.bind="currentPage === 1" click.trigger="changePage(-1)">Vorige</button>
+        <span>Pagina ${currentPage} van ${pageCount}</span>
+        <button type="button" class="ghost" disabled.bind="currentPage === pageCount" click.trigger="changePage(1)">Volgende</button>
+        <button type="button" class="ghost" disabled.bind="currentPage === pageCount" click.trigger="goToPage(pageCount)">Laatste</button>
+      </div>
+    </section>
+
+    <section class="panel muted" if.bind="!hasData">
+      <h3>Geen data geladen</h3>
+      <p class="hint">Start met een shapefile of GeoJSON upload om de filters en export te gebruiken.</p>
+    </section>
+  </section>
+</template>

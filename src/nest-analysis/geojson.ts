@@ -35,10 +35,20 @@ export function parseGeoJsonPoints(text: string): ParsedGeoJson {
     const [lon, lat] = geom.coordinates;
     if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
 
-    const dateStart = feat.properties?.datm_start || feat.properties?.dateStart;
-    const dateStop = feat.properties?.datm_stop || feat.properties?.dateStop;
+    const attrs = feat.properties && typeof feat.properties === "object"
+      ? { ...feat.properties }
+      : {};
+    const dateStart = attrs?.datm_start || attrs?.dateStart;
+    const dateStop = attrs?.datm_stop || attrs?.dateStop;
 
-    points.push({ x: lon, y: lat, dateStart, dateStop });
+    points.push({
+      x: lon,
+      y: lat,
+      dateStart,
+      dateStop,
+      attributes: attrs,
+      recordIndex: points.length
+    });
     bounds = updateBounds(bounds, lon, lat);
   }
 

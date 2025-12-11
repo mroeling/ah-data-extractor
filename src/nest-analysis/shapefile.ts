@@ -14,6 +14,8 @@ export interface ObservationPoint {
   y: number;
   dateStart?: string; // YYYYMMDD
   dateStop?: string;  // YYYYMMDD
+  recordIndex?: number;
+  attributes?: Record<string, unknown>;
 }
 
 export interface ParsedShapefile {
@@ -185,6 +187,7 @@ export function parseShapefile(buffer: ArrayBuffer): ParsedShapefile {
   const view = new DataView(buffer);
   const header = parseHeader(view);
   const points: ObservationPoint[] = [];
+  let recordIndex = 0;
 
   let offset = 100; // after header
   while (offset + 12 <= view.byteLength) {
@@ -208,12 +211,12 @@ export function parseShapefile(buffer: ArrayBuffer): ParsedShapefile {
       case 1: { // Point
         const x = view.getFloat64(recordStart + 4, true);
         const y = view.getFloat64(recordStart + 12, true);
-        points.push({ x, y });
+        points.push({ x, y, recordIndex });
         break;
       }
       case 8: { // MultiPoint
         const { points: pts, next } = readMultiPointRecord(view, recordStart);
-        points.push(...pts);
+        points.push(...pts.map(p => ({ ...p, recordIndex })));
         if (recordStart + contentBytes !== next) {
           // align to record end if our parser didn't consume everything
         }
@@ -223,7 +226,7 @@ export function parseShapefile(buffer: ArrayBuffer): ParsedShapefile {
       case 5: { // Polygon
         const { centroid } = readPolyRecord(view, recordStart);
         if (centroid) {
-          points.push(centroid);
+          points.push({ ...centroid, recordIndex });
         }
         break;
       }
@@ -232,6 +235,7 @@ export function parseShapefile(buffer: ArrayBuffer): ParsedShapefile {
         break;
     }
 
+    recordIndex++;
     offset = recordEnd;
   }
 

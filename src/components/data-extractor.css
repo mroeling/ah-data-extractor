@@ -1,0 +1,272 @@
+.data-extractor {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: #0f172a;
+}
+
+.hero h1 {
+  margin: 0.2rem 0;
+  font-size: 2rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.lead {
+  margin: 0;
+  color: #475569;
+}
+
+.panel {
+  margin-top: 1.25rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.1rem 1.25rem;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.panel-eyebrow {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.panel h2 {
+  margin: 0.1rem 0 0;
+  font-size: 1.3rem;
+}
+
+.panel.muted {
+  text-align: center;
+  border-style: dashed;
+  color: #475569;
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  align-items: center;
+}
+
+.divider {
+  text-align: center;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.95rem;
+}
+
+.field span {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.field input[type="file"],
+.field input[type="text"],
+.field input[type="search"],
+.field input[type="date"],
+.field input[type="number"],
+.field select {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.95rem;
+  background: #f8fafc;
+}
+
+.field.inline {
+  display: inline-flex;
+}
+
+.field.compact input,
+.field.compact select {
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.checkbox input {
+  accent-color: #2563eb;
+}
+
+.hint {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.status {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #0f172a;
+}
+
+.status.error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.filters {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.bounds-row {
+  align-items: flex-start;
+}
+
+.bounds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #2563eb, #7c3aed);
+  color: #fff;
+  padding: 0.55rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button.ghost {
+  background: #e2e8f0;
+  color: #0f172a;
+  box-shadow: none;
+}
+
+.results-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.table-wrap {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+
+th, td {
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+th {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.results .hint {
+  margin-top: 0.5rem;
+}
+
+.map-link {
+  text-decoration: none;
+  font-size: 1rem;
+}
+
+.data-extractor.is-busy,
+.data-extractor.is-busy * {
+  cursor: progress !important;
+}
+
+@media (max-width: 640px) {
+  .hero h1 {
+    font-size: 1.6rem;
+  }
+
+  button {
+    width: 100%;
+  }
+
+  .panel-head, .results-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .actions {
+    width: 100%;
+  }
+}
